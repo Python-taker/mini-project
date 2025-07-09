@@ -52,15 +52,11 @@ bash setup.sh
 - .venv 안에 가상환경이 생성됩니다.
 - requirements.txt로 필요한 패키지가 자동 설치됩니다.
 
-```yaml
-
 ---
 
-# ✅ 요약
+## ✅ 요약
 - `.bat` → Windows 전용: Python, Tesseract 체크 & 안내
 - `.sh` → Linux/macOS: Python, Tesseract 체크 & 안내
 - `README.md` → 링크와 명령어 명시
 
 ---
-
-```
