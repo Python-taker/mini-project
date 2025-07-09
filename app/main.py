@@ -1,27 +1,37 @@
 from fastapi import FastAPI, Request
 
+### ========== local library ========== ###
+from app.services.webhook_handler import handle_webhook
+from app.services.oauth_handler import handle_oauth
+from app.utils.kakao_oauth import build_kakao_auth_url
+
 app = FastAPI()
+
 
 @app.get("/")
 async def root():
     return {"message": "FastAPI 챗봇 서버 실행 중!"}
 
+
 @app.post("/webhook")
 async def webhook(request: Request):
     data = await request.json()
-    print(f"📩 받은 데이터: {data}")
+    return handle_webhook(data)
 
-    # 여기서 data를 LLM에 넘기고 처리 결과를 만들어야 함
-    # 지금은 테스트용으로 메시지를 그대로 돌려보냄
-    return {
-        "version": "2.0",
-        "template": {
-            "outputs": [
-                {
-                    "simpleText": {
-                        "text": f"받은 메시지: {data}"
-                    }
-                }
-            ]
-        }
-    }
+
+@app.get("/auth_url")
+async def auth_url():
+    """
+    인증 URL 확인용 엔드포인트
+    """
+    url = build_kakao_auth_url()
+    return {"auth_url": url}
+
+
+@app.get("/oauth")
+async def oauth(request: Request):
+    """
+    카카오 OAuth 인증 콜백 엔드포인트
+    """
+    params = dict(request.query_params)
+    return handle_oauth(params)

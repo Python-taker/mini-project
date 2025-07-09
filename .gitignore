@@ -1,1 +1,9 @@
 .venv
+.env
+__pycache__/
+
+# settings
+config/settings.json
+
+# user access_token
+storage/tokens.json

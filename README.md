@@ -54,6 +54,38 @@ bash setup.sh
 
 ---
 
+## 환경 변수 설정
+
+루트 디렉토리에 `.env` 파일을 만들어 아래와 같이 작성해 주세요:
+
+```bash
+KAKAO_REST_API_KEY=your-kakao-rest-api-key
+OPENAI_API_KEY=your-openai-api-key
+UPSTAGE_SOLAR_PRO_API_KEY=your-upstage-api-key
+```
+
+```bash
+`.env` 파일은 민감한 정보가 포함되므로 절대 깃에 올리지 마세요.
+프로젝트를 실행하기 전에 반드시 `.env` 파일을 생성해야 합니다.
+```
+
+---
+
+## 설정 파일
+
+`config/settings.json`에 BASE_URL만 작성하세요:
+
+```json
+{
+  "BASE_URL": "https://your-ngrok-url.ngrok-free.app"
+}
+```
+
+`storage/tokens.json` 파일은 서버가 자동 생성하며, 유저별 `access_token` 정보를 저장합니다. 
+git에 업로드하지 않도록 주의하세요.
+
+---
+
 ## ✅ 요약
 - `.bat` → Windows 전용: Python, Tesseract 체크 & 안내
 - `.sh` → Linux/macOS: Python, Tesseract 체크 & 안내
