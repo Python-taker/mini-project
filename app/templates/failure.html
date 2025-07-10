@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>인증 실패</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        text-align: center;
+        margin-top: 50px;
+      }
+      button {
+        padding: 10px 20px;
+        font-size: 16px;
+        margin-top: 20px;
+      }
+      p.notice {
+        color: gray;
+        font-size: 14px;
+      }
+    </style>
+    <script>
+      function isMobile() {
+        return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      }
+
+      window.onload = function () {
+        if (!isMobile()) {
+          setTimeout(() => {
+            window.close();
+          }, 5000);
+        }
+      };
+
+      function handleClose() {
+        if (!isMobile()) {
+          window.close();
+        } else {
+          alert("모바일에서는 브라우저를 닫고 카카오톡으로 돌아가 주세요.");
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <h1>❌ 인증에 실패했습니다.</h1>
+    <p>카카오톡으로 돌아가 인증을 다시 시도해 주세요.</p>
+    <p class="notice">
+      PC에서는 5초 후 자동으로 닫히거나, 아래 버튼을 눌러 닫을 수 있습니다.
+    </p>
+    <button onclick="handleClose()">창 닫기</button>
+  </body>
+</html>

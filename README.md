@@ -2,6 +2,9 @@
 SSAFY 2025.07.09 ~ 2025.07.11
 # Mini-Project Setup Guide
 
+## Activate venv
+- source activate.sh
+
 ## 📦 Requirements
 - Python 3.10.x
 - Tesseract OCR
