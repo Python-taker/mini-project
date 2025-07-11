@@ -8,6 +8,7 @@ main.py
 from fastapi import FastAPI, Request, Query
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from fastapi import BackgroundTasks
 
 from app.services.webhook_handler import handle_webhook
 from app.services.oauth_handler import handle_oauth
@@ -32,18 +33,19 @@ async def root() -> dict:
 
 
 @app.post("/webhook", summary="카카오톡 Webhook")
-async def webhook(request: Request) -> dict:
+async def webhook(request: Request, background_tasks: BackgroundTasks) -> dict:
     """
     카카오톡에서 들어오는 Webhook 이벤트 처리
 
     Args:
         request (Request): 요청 객체
+        background_tasks (BackgroundTasks): 백그라운드 작업 관리 객체
 
     Returns:
         dict: 카카오톡에 응답할 JSON
     """
     data = await request.json()
-    return await handle_webhook(data)
+    return await handle_webhook(data, background_tasks)
 
 
 @app.get("/auth_url", summary="카카오 인증 URL 생성")

@@ -100,15 +100,16 @@ mini-project/
 │   ├── routers/               # (비어있음, 추후 라우터 분리용)
 │   │
 │   ├── services/
-│   │   ├── auth_checker.py            # 인증 상태 확인
+│   │   ├── auth_checker.py                  # 인증 상태 확인
 │   │   ├── category_recommendation_service.py   # 카테고리 추천 전체 워크플로
-│   │   ├── kakao_message_sender.py   # 카카오톡 메시지 발송
-│   │   ├── oauth_handler.py          # OAuth 콜백 처리
-│   │   └── webhook_handler.py        # 카카오 webhook 요청 처리
+│   │   ├── kakao_message_sender.py         # 카카오톡 메시지 발송
+│   │   ├── oauth_handler.py                # OAuth 콜백 처리
+│   │   ├── webhook_handler.py              # 카카오 webhook 요청 처리
+│   │   └── category_flow_executor.py       # 카테고리 매칭 → URL → 크롤링까지 처리
 │   │
 │   ├── templates/
-│   │   ├── failure.html              # 인증 실패 안내 페이지
-│   │   └── success.html              # 인증 성공 안내 페이지
+│   │   ├── failure.html                    # 인증 실패 안내 페이지
+│   │   └── success.html                    # 인증 성공 안내 페이지
 │   │
 │   └── utils/
 │       ├── build_category_dict.py           # 카테고리 dict 구성 유틸
@@ -116,40 +117,50 @@ mini-project/
 │       ├── kakao_oauth.py                   # 인증 URL 생성 및 토큰 발급
 │       ├── parser.py                        # webhook 요청 파싱
 │       ├── recommendation_formatter.py      # 추천 결과 보기 좋게 포맷팅
-│       └── session_manager.py               # 유저별 세션 상태 관리
+│       ├── session_manager.py               # 유저별 세션 상태 관리
+│       ├── category_spec_storage.py         # 크롤링 결과 저장/로드
+│       └── category_url_resolver.py         # 중간/세부 카테고리 → URL 매핑
 │
 ├── chatbot_llm/
-│   ├── refine_llm.py                 # OpenAI 기반 추천 상세화
-│   └── validate_llm.py               # OpenAI 기반 카테고리 유효성 검사
+│   ├── refine_llm.py                       # OpenAI 기반 추천 상세화
+│   ├── validate_llm.py                     # OpenAI 기반 카테고리 유효성 검사
+│   ├── category_match_llm.py               # 사용자 발화 → 카테고리/세부항목 매칭
+│   └── is_affirmative_llm.py               # 사용자 발화 → 긍정/부정 판별
 │
 ├── crawling/
-│   ├── test.py                       # 크롤링 테스트 코드
-│   └── chromedriver-linux64/            # 크롬드라이버 바이너리 
-│       ├── chromedriver                 # 크롬드라이버 실행 파일
-│       ├── LICENSE.chromedriver        # 라이선스
+│   ├── test.py                             # 크롤링 테스트 코드
+│   └── chromedriver-linux64/              # 크롬드라이버 바이너리 
+│       ├── chromedriver                    # 크롬드라이버 실행 파일
+│       ├── LICENSE.chromedriver           # 라이선스
 │       └── THIRD_PARTY_NOTICES.chromedriver # 서드파티 공지
 │
-├── llm/                              # (비어있음, LLM 관련 코드 예정)
-├── ocr/                              # (비어있음, OCR 코드 예정)
-├── stt/                              # (비어있음, STT 코드 예정)
-├── stable_diffusion/                # (비어있음, 이미지 생성 예정)
+├── llm/                                   # (비어있음, LLM 관련 코드 예정)
+├── ocr/                                   # (비어있음, OCR 코드 예정)
+├── stt/                                   # (비어있음, STT 코드 예정)
+├── stable_diffusion/                     # (비어있음, 이미지 생성 예정)
 │
-├── prompts/                          # LLM 프롬프트 모음
-│   ├── refine_system_prompt.txt     # refine system 프롬프트
-│   ├── refine_user_prompt.txt       # refine user 프롬프트
-│   ├── validate_system_prompt.txt   # validate system 프롬프트
-│   └── validate_user_prompt.txt     # validate user 프롬프트
+├── prompts/                              # LLM 프롬프트 모음
+│   ├── refine_system_prompt.txt          # refine system 프롬프트
+│   ├── refine_user_prompt.txt            # refine user 프롬프트
+│   ├── validate_system_prompt.txt        # validate system 프롬프트
+│   ├── validate_user_prompt.txt          # validate user 프롬프트
+│   ├── category_match_system_prompt.txt  # 카테고리 매칭 system 프롬프트
+│   ├── category_match_user_prompt.txt    # 카테고리 매칭 user 프롬프트
+│   ├── is_affirmative_system_prompt.txt  # 긍/부 판별 system 프롬프트
+│   └── is_affirmative_user_prompt.txt    # 긍/부 판별 user 프롬프트
 │
 ├── selenium_utils/
-│   ├── category_structure_builder.py    # 카테고리 JSON 구조 빌더
-│   └── chromedriver_installer.py        # 크롬드라이버 설치 유틸
+│   ├── category_structure_builder.py     # 카테고리 JSON 구조 빌더
+│   ├── chromedriver_installer.py         # 크롬드라이버 설치 유틸
+│   └── manufacturer_brand_crawler.py    # 다나와 크롤링 로직 (옵션/네비)
 │
 ├── storage/
-│   ├── category_structure_keys.json     # 카테고리 키 데이터
-│   ├── category_structure_prompt.json  # 카테고리 prompt 데이터
-│   ├── category_structure.json         # 카테고리 전체 구조
-│   ├── token_manager.py                # 사용자 토큰 관리
-│   └── tokens.json                     # (자동 생성, 유저 토큰 정보)
+│   ├── category_structure_keys.json      # 카테고리 키 데이터
+│   ├── category_structure_prompt.json    # 카테고리 prompt 데이터
+│   ├── category_structure.json           # 카테고리 전체 구조
+│   ├── token_manager.py                  # 사용자 토큰 관리
+│   ├── tokens.json                       # (자동 생성, 유저 토큰 정보)
+│   └── category_spec/                    # 크롤링 결과 저장 폴더 (.json)
 │
 ├── .env                       # API 키 저장 (직접 작성)
 ├── requirements.txt           # 패키지 의존성 명세

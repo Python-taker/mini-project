@@ -18,7 +18,6 @@ response.raise_for_status()  # 에러 발생 시 예외
 
 soup = BeautifulSoup(response.text, "html.parser")
 div_category = soup.find('div', attrs={"id": "category"})
-#print(div_category.get_text(strip=True))
 a_category__list__btn = div_category.find_all("a", attrs={"class": "category__list__btn"})
 a_href_list = []
 for href in a_category__list__btn:

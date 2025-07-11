@@ -34,3 +34,44 @@ def format_recommendation_message(
         lines.append(footer_text.strip())
 
     return "\n".join(lines)
+
+# 다른 키가 여러 개여도 첫 번째 키만 출력하도록 의도적으로 작성함
+def format_crawled_result(result: dict) -> str:
+    """
+    크롤링 결과를 사용자 메시지용 문자열로 변환
+
+    Args:
+        result (dict): 크롤링 결과 딕셔너리
+
+    Returns:
+        str: 포맷팅된 메시지 문자열
+    """
+    if not result or not isinstance(result, dict):
+        return "죄송합니다. 추천할 정보를 찾지 못했습니다."
+
+    # nav를 제외한 다른 키가 있는지 검사
+    other_keys = [k for k in result.keys() if k != "nav"]
+
+    if other_keys:
+        # 다른 키가 하나라도 있으면 그 키의 리스트를 출력
+        mid_key = other_keys[0]
+        details = result.get(mid_key, [])
+        if isinstance(details, list) and details:
+            lines = [f"=====  ⭐️ {mid_key} ⭐️  ====="]
+            for idx, detail in enumerate(details, start=1):
+                lines.append(f"{idx}. {detail}")
+            lines.append("")
+            lines.append("원하시는 추천 항목 번호를 입력해 주세요!")
+            return "\n".join(lines)
+
+    # 다른 키가 없고 nav만 있을 때
+    nav = result.get("nav", {})
+    if nav:
+        lines = [f"=====  🔶 유사 항목 🔶  ====="]
+        for idx, (name, _) in enumerate(nav.items(), start=1):
+            lines.append(f"{idx}. {name}")
+        lines.append("")
+        lines.append("원하시는 유사 항목 번호를 입력해 주세요!")
+        return "\n".join(lines)
+
+    return "죄송합니다. 추천할 정보를 찾지 못했습니다."

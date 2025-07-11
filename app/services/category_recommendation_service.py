@@ -48,11 +48,12 @@ async def recommend_category(user_message: str) -> list:
     return refine_result
 
 
-import asyncio
+
 # =====================================================
 # CLI 테스트
 # =====================================================
 if __name__ == "__main__":
+    import asyncio
     example_input = "사무실에서 쓸 만한 노트북 추천해줘"
     print(f"입력: {example_input}")
     result = asyncio.run(recommend_category(example_input))
