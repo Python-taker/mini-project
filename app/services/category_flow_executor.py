@@ -6,11 +6,11 @@ category_flow_executor.py
   (저장은 호출하는 쪽에서 처리)
 """
 
+import asyncio
 from app.utils.session_manager import get_session
 from app.utils.category_url_resolver import resolve_category_url
 from chatbot_llm.category_match_llm import category_match
 from selenium_utils.manufacturer_brand_crawler import crawl_spec_options
-
 
 async def prepare_category_flow(user_id: str, utterance: str):
     """
@@ -40,7 +40,7 @@ async def prepare_category_flow(user_id: str, utterance: str):
     return [True, (mid_key, detail_key, url)]
 
 
-def execute_category_crawling(detail_key: str, url: str):
+async def execute_category_crawling(detail_key: str, url: str):
     """
     URL에 대해 크롤링만 수행
     (저장은 호출하는 쪽에서 처리)
@@ -52,7 +52,8 @@ def execute_category_crawling(detail_key: str, url: str):
     Returns:
         [bool, dict | str]: 성공 시 [True, 크롤링 데이터], 실패 시 [False, 메시지]
     """
-    crawled_data = crawl_spec_options(url)
+    # 크롤링은 블로킹 동작이므로 별도 스레드로 실행
+    crawled_data = await asyncio.to_thread(crawl_spec_options, url)
 
     if not crawled_data or all(len(v) == 0 for v in crawled_data.values()):
         return [False, "죄송합니다. 카테고리 정보를 가져오지 못했습니다."]
@@ -89,7 +90,7 @@ if __name__ == "__main__":
         print(f"URL: {url}")
         print("크롤링을 진행합니다…")
 
-        crawl_result = execute_category_crawling(detail_key, url)
+        crawl_result = asyncio.run(execute_category_crawling(detail_key, url))
         if crawl_result[0]:
             print(f"✅ 크롤링 성공")
             crawled_data = crawl_result[1]

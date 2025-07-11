@@ -24,29 +24,40 @@ def get_session(user_id: str) -> dict:
 
 def update_session(
     user_id: str,
-    stage: int,
-    user_utterance: str,
-    bot_raw_result: Optional[dict] = None
+    stage: Optional[int] = None,
+    user_utterance: Optional[str] = None,
+    bot_raw_result: Optional[dict] = None,
+    **kwargs
 ) -> None:
     """
-    세션 상태(stage, history) 업데이트
+    세션 상태 업데이트
 
     Args:
         user_id (str): 유저 고유 ID
-        stage (int): 현재 단계
-        user_utterance (str): 사용자가 입력한 문장
-        bot_raw_result (dict | None): 챗봇 추천 결과(raw)
+        stage (int, optional): 현재 단계
+        user_utterance (str, optional): 사용자가 입력한 문장
+        bot_raw_result (dict | None, optional): 챗봇 추천 결과(raw)
+        **kwargs: 기타 세션에 저장할 추가 키-값
     """
     session = get_session(user_id)
-    session["stage"] = stage
-    session["last_user_input"] = user_utterance
-    session["last_bot_message"] = bot_raw_result  # 최근 응답 저장
+
+    if stage is not None:
+        session["stage"] = stage
+    if user_utterance is not None:
+        session["last_user_input"] = user_utterance
+    if bot_raw_result is not None:
+        session["last_bot_message"] = bot_raw_result
+
+    # 기타 키-값 업데이트
+    for k, v in kwargs.items():
+        session[k] = v
 
     # history 누적
-    session["history"].append({
-        "user": user_utterance,
-        "bot_raw": bot_raw_result
-    })
+    if user_utterance is not None:
+        session["history"].append({
+            "user": user_utterance,
+            "bot_raw": bot_raw_result
+        })
 
 
 def clear_session(user_id: str) -> None:

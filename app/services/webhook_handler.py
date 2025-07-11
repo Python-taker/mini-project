@@ -26,9 +26,11 @@ from app.utils.session_manager import (
     update_session,
     clear_session
 )
+from pathlib import Path
 from app.utils.category_spec_storage import save_category_spec
 from fastapi import BackgroundTasks
 from chatbot_llm.is_affirmative_llm import is_affirmative
+from app.utils.category_spec_storage import save_category_spec, load_category_spec, sanitize_filename
 
 # =======================================================
 # 공통 응답 생성
@@ -114,7 +116,7 @@ async def handle_stage_2(user_id: str, utterance: str) -> str:
 async def handle_stage_3(user_id: str, utterance: str, background_tasks) -> str:
     session = get_session(user_id)
     bot_data = session.get("last_bot_message", {})
-    detail_key = bot_data.get("detail_key")
+    detail_key = bot_data.get("detail_key")  # 원본
     url = bot_data.get("url")
 
     # 🔷 LLM으로 긍정/부정 판단
@@ -124,20 +126,121 @@ async def handle_stage_3(user_id: str, utterance: str, background_tasks) -> str:
         update_session(user_id, stage=1, user_utterance=utterance)
         return "✅ 이전 단계로 돌아갑니다. 원하시는 상품을 다시 말씀해 주세요!"
 
-    crawl_result = execute_category_crawling(detail_key, url)
+    # 🔷 파일 존재 여부 확인
+    sanitized_key = sanitize_filename(detail_key)
+    file_path = f"storage/category_spec/{sanitized_key}.json"
 
-    if not crawl_result or (isinstance(crawl_result, list) and not crawl_result[0]):
-        return crawl_result[1] if isinstance(crawl_result, list) and len(crawl_result) > 1 \
-            else "죄송합니다. 크롤링에 실패했습니다. 다시 시도해 주세요."
+    if Path(file_path).exists():
+        # 파일이 있으면 로드 (load_category_spec 내부에서 sanitize 처리됨)
+        cached = load_category_spec(detail_key)
+        crawled_data = cached["data"]
+    else:
+        # 파일 없으면 크롤링 (원본 detail_key 사용)
+        crawl_result = await execute_category_crawling(detail_key, url)
 
-    crawled_data = crawl_result[1]
+        if not crawl_result or (isinstance(crawl_result, list) and not crawl_result[0]):
+            update_session(user_id, stage=1, user_utterance=utterance)
+            return crawl_result[1] if isinstance(crawl_result, list) and len(crawl_result) > 1 \
+                else "죄송합니다. 크롤링에 실패했습니다. 다시 시도해 주세요."
 
-    # 💾 저장을 비동기적으로 진행
-    background_tasks.add_task(save_category_spec, url, detail_key, crawled_data)
+        crawled_data = crawl_result[1]
 
-    update_session(user_id, stage=4, user_utterance=utterance)
+        # 💾 저장을 비동기적으로 진행 (원본 detail_key 사용)
+        background_tasks.add_task(save_category_spec, url, detail_key, crawled_data)
+
+    # 세션 갱신
+    update_session(user_id, stage=4, user_utterance=utterance, bot_raw_result=crawled_data)
 
     return format_crawled_result(crawled_data)
+
+
+# =======================================================
+# Stage 4 상태 유틸
+# =======================================================
+def get_stage4_state(session: dict) -> dict:
+    return session.get("stage4_state", {})
+
+
+def update_stage4_state(user_id: str, **kwargs):
+    session = get_session(user_id)
+    state = session.get("stage4_state", {})
+    state.update(kwargs)
+    update_session(user_id, stage4_state=state)
+
+# =======================================================
+# Stage 4 핸들러
+# =======================================================
+async def handle_stage_4(user_id: str, utterance: str, background_tasks) -> str:
+    session = get_session(user_id)
+    crawled_data = session.get("last_bot_message", {})  # Stage 3 결과
+
+    stage4_state = get_stage4_state(session)
+
+    # 현재 단계가 두 번째 선택 단계인지 확인
+    if stage4_state.get("first_selection") and not stage4_state.get("second_selection"):
+        # 두 번째 선택 단계
+        second_key = stage4_state.get("second_key")
+        second_choices = crawled_data.get(second_key, [])
+        print(second_key , second_choices)
+        # 유효성 확인
+        from chatbot_llm.is_valid_choice_llm import is_valid_choice
+        result = await is_valid_choice(utterance, {second_key: second_choices})
+
+        if not result["valid"]:
+            print("설마 여기?")
+            update_session(user_id, stage=1, user_utterance=utterance)
+            return "✅ 선택을 다시 진행할게요. 원하시는 상품을 다시 말씀해 주세요!"
+
+        # 유효 → 확인 질문
+        matched = ", ".join(result["matched_choices"])
+        update_stage4_state(user_id, second_selection=result["matched_choices"])
+
+        return (
+            f"방금 선택하신 {second_key} ‘{matched}’로 진행할까요? "
+            f"진행을 원하시면 긍정의 의사를 알려주세요."
+        )
+    print("두번째 접근")
+    # 두 번째 선택 확인 긍/부 답변
+    if stage4_state.get("first_selection") and not stage4_state.get("second_selection"):
+        from chatbot_llm.is_affirmative_llm import is_affirmative
+        affirmative = await is_affirmative(utterance)
+
+        if affirmative:
+            # 유저가 긍정 → 두 번째 선택으로 진행
+            second_key = stage4_state.get("second_key")
+            second_choices = crawled_data.get(second_key, [])
+            choices_str = "\n".join(f"- {item}" for item in second_choices)
+            return f"다음 중 하나를 선택해 주세요. 가능한 {second_key}는 다음과 같습니다:\n{choices_str}"
+
+        else:
+            # 유저가 부정 → 다시 첫 번째 선택부터
+            print("여기인가?")
+            update_session(user_id, stage=1, user_utterance=utterance)
+            return "✅ 선택을 다시 진행할게요. 원하시는 상품을 다시 말씀해 주세요!"
+
+    # 첫 번째 선택 단계
+    first_key = list(crawled_data.keys())[0]
+    first_choices = crawled_data[first_key]
+
+    # 유효성 확인
+    from chatbot_llm.is_valid_choice_llm import is_valid_choice
+    result = await is_valid_choice(utterance, {first_key: first_choices})
+
+    if not result["valid"]:
+        print("이쪽인가?")
+        update_session(user_id, stage=1, user_utterance=utterance)
+        return "✅ 선택을 다시 진행할게요. 원하시는 상품을 다시 말씀해 주세요!"
+
+    # 유효 → 확인 질문
+    matched = ", ".join(result["matched_choices"])
+    update_stage4_state(user_id, first_key=first_key, first_selection=result["matched_choices"])
+
+    return (
+        f"방금 선택하신 {first_key} ‘{matched}’로 진행할까요? "
+        f"진행을 원하시면 긍정의 의사를 알려주세요."
+    )
+
+
 
 
 # =======================================================
@@ -161,6 +264,8 @@ async def handle_webhook(data: dict, background_tasks: BackgroundTasks) -> dict:
         response_text = await handle_stage_2(user_id, utterance)
     elif stage == 3:
         response_text = await handle_stage_3(user_id, utterance, background_tasks)
+    elif stage == 4:
+        response_text = await handle_stage_4(user_id, utterance, background_tasks)
     else:
         update_session(user_id, stage=stage, user_utterance=utterance)
         response_text = "작업을 계속 진행합니다…"

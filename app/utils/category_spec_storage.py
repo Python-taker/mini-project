@@ -8,6 +8,7 @@ category_spec_storage.py
 📌 함수
 - save_category_spec(url: str, detail_name: str, data: dict) -> None
 - load_category_spec(detail_name: str) -> dict
+- category_spec_exists(detail_name: str) -> bool
 """
 
 import json
@@ -82,3 +83,19 @@ def load_category_spec(detail_name: str) -> dict:
 
     print(f"📄 불러오기 완료: {file_path}")
     return payload
+
+
+# =====================================================
+# 4️⃣ 존재 여부 확인 함수
+# =====================================================
+def category_spec_exists(detail_name: str) -> bool:
+    """
+    저장된 JSON 파일 존재 여부를 확인
+    - detail_name: 파일명 (확장자 제외)
+    - return: bool
+    """
+    filename = sanitize_filename(detail_name)
+    file_path = STORAGE_DIR / f"{filename}.json"
+    exists = file_path.exists()
+    print(f"🔍 파일 존재 여부({file_path}): {exists}")
+    return exists

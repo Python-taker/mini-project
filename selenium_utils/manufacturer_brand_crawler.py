@@ -99,7 +99,7 @@ def crawl_spec_options(url: str) -> dict:
     - 옵션이 없으면 nav_3depth를 대신 크롤링
     """
     driver = setup_selenium_driver()
-    wait = WebDriverWait(driver, 3)  # 명시적 대기 3초
+    wait = WebDriverWait(driver, 2.5)  # 명시적 대기 2.5초
 
     driver.get(url)
 

@@ -26,7 +26,6 @@ def load_text_file(path: Path) -> str:
     with open(path, "r", encoding="utf-8") as f:
         return f.read().strip()
 
-
 # =====================================================
 # LLM 호출
 # =====================================================
@@ -55,15 +54,26 @@ async def _call_affirmative_llm(utterance: str) -> bool:
 
     content = response.choices[0].message.content.strip()
 
-    # 🔷 후처리
+    # 🔷 후처리: 코드블록 제거
     if content.startswith("```"):
         content = content.strip("`").strip()
-        if content.lower().startswith("json") or content.lower().startswith("python"):
+        if content.lower().startswith(("json", "python")):
             content = content.split("\n", 1)[-1].strip()
 
-    # 긍정 판단
-    return content.upper().startswith("YES")
+    # 🔷 로그
+    print(f"📝 LLM 응답: {content}")
 
+    # 🔷 긍정/부정 판단
+    content_clean = content.strip().upper()
+    print(f"📝 LLM 응답: '{content_clean}'")
+    if content_clean == "YES":
+        return True
+    elif content_clean == "NO":
+        return False
+    else:
+        # 예상치 못한 응답
+        print(f"⚠️ LLM 예상치 못한 응답 형식: {content}")
+        return False
 
 # =====================================================
 # is_affirmative 함수 (외부 호출 진입점)
@@ -73,7 +83,6 @@ async def is_affirmative(utterance: str) -> bool:
     외부에서 호출하는 함수: 동기 → 비동기 실행
     """
     return await _call_affirmative_llm(utterance)
-
 
 # =====================================================
 # CLI 테스트
