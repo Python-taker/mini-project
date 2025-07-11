@@ -61,7 +61,7 @@ def format_crawled_result(result: dict) -> str:
             for idx, detail in enumerate(details, start=1):
                 lines.append(f"{idx}. {detail}")
             lines.append("")
-            lines.append("원하시는 추천 항목 번호를 입력해 주세요!")
+            lines.append("원하시는 추천 항목 번호를 모두 입력해 주세요!")
             return "\n".join(lines)
 
     # 다른 키가 없고 nav만 있을 때

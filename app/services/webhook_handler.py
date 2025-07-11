@@ -29,6 +29,7 @@ from app.utils.session_manager import (
 from app.utils.category_spec_storage import save_category_spec
 from fastapi import BackgroundTasks
 from chatbot_llm.is_affirmative_llm import is_affirmative
+from chatbot_llm.is_valid_choice_llm import is_valid_choice
 
 # =======================================================
 # 공통 응답 생성
@@ -135,10 +136,62 @@ async def handle_stage_3(user_id: str, utterance: str, background_tasks) -> str:
     # 💾 저장을 비동기적으로 진행
     background_tasks.add_task(save_category_spec, url, detail_key, crawled_data)
 
-    update_session(user_id, stage=4, user_utterance=utterance)
+    background_tasks.add_task(update_session,user_id, stage=4, user_utterance=utterance, bot_raw_result=crawled_data)
 
     return format_crawled_result(crawled_data)
 
+# =======================================================
+# stage 4 핸들러
+# =======================================================
+async def handle_stage_4(user_id: str, utterance: str, background_tasks) -> str:
+    session = get_session(user_id)
+    bot_data = session.get("last_bot_message", {})
+    crawled_data = bot_data.get("bot_raw_result", {})
+    detail_key = bot_data.get("detail_key")
+    url = bot_data.get("url")
+
+    # 🔷 다음 질문 키 확인
+    keys = list(crawled_data.keys())
+    if len(keys) < 2:
+        update_session(user_id, stage=1, user_utterance=utterance)
+        return "🚧 다음 질문 항목이 없습니다. (아직 미구현 상태입니다.)"
+
+    next_question_key = keys[1]
+    next_question_items = crawled_data[next_question_key]
+
+    # 🔷 사용자 선택 유효성 검사
+    valid_check = await is_valid_choice(utterance, {next_question_key: next_question_items})
+    if not valid_check[0]:
+        # 실패 시 → stage를 3으로 되돌림
+        update_session(user_id, stage=3, user_utterance=utterance)
+        return "❌ 선택하신 항목이 유효하지 않습니다. 다시 선택해 주세요!"
+
+    selected_items = valid_check[1]
+
+    # 🔷 사용자 긍정 여부 확인
+    affirmative = await is_affirmative(utterance)
+    if not affirmative:
+        # 부정 시 → stage를 3으로 되돌림
+        update_session(user_id, stage=3, user_utterance=utterance)
+        return "✅ 선택을 취소하셨습니다. 다시 선택해 주세요!"
+
+    # 🔷 nav 항목 체크
+    if next_question_key.lower() == "nav":
+        update_session(user_id, stage=1, user_utterance=utterance)
+        return "🚧 nav 항목은 아직 미구현 상태입니다. 양해 부탁드립니다."
+
+    # 🔷 다음 질문이 가능하다면 보기 출력
+    if isinstance(next_question_items, list) and len(next_question_items) > 0:
+        numbered_list = "\n".join(
+            [f"{i+1}. {item}" for i, item in enumerate(next_question_items)]
+        )
+        # session은 유지 (stage는 4로 유지)
+        return (
+            f"🔷 {next_question_key}를 선택해 주세요:\n{numbered_list}\n\n"
+            f"원하시는 추천 항목 번호를 모두 입력해 주세요!"
+        )
+
+    return True
 
 # =======================================================
 # 메인 핸들러
@@ -161,6 +214,8 @@ async def handle_webhook(data: dict, background_tasks: BackgroundTasks) -> dict:
         response_text = await handle_stage_2(user_id, utterance)
     elif stage == 3:
         response_text = await handle_stage_3(user_id, utterance, background_tasks)
+    elif stage == 4:
+        response_text = await handle_stage_4(user_id, utterance, background_tasks)
     else:
         update_session(user_id, stage=stage, user_utterance=utterance)
         response_text = "작업을 계속 진행합니다…"
